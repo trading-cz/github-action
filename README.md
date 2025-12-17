@@ -6,6 +6,7 @@ Centralized, reusable GitHub Actions workflows for trading-cz Python projects.
 
 This repository provides parameterized, reusable GitHub Actions workflows via `workflow_call`:
 
+- **`megalinter.yml`** — Code quality & linting (auto-fixes enabled)
 - **`python-ci.yml`** — Continuous Integration (lint, test, type-check)
 - **`python-build-docker.yml`** — Docker image build & push to GHCR
 - **`python-build-wheel.yml`** — Python wheel build & publish to GitHub Releases
@@ -13,6 +14,30 @@ This repository provides parameterized, reusable GitHub Actions workflows via `w
 Instead of duplicating CI logic across repos, teams can call these workflows from their own `.github/workflows/` directories.
 
 ## Quick Start
+
+### Add MegaLinter workflow to your repo
+
+Create `.github/workflows/megalinter.yml` in your repository:
+
+```yaml
+name: MegaLinter
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  megalinter:
+    uses: trading-cz/github-action/.github/workflows/megalinter.yml@main
+```
+
+The workflow will:
+- Use your repo's `.mega-linter.yml` if it exists
+- Fallback to defaults from github-action (optimized linter set: ruff, black, isort, mypy)
+- Auto-fix issues on PRs/push events
+- Report results in PR comments and job summaries
+
+**Optional:** Create `.mega-linter.yml` in your repo to customize which linters run.
 
 ### Add CI workflow to your repo
 
@@ -75,12 +100,14 @@ jobs:
 ## Repository Structure
 
 ```
-github-actions/
+github-action/
 ├── .github/workflows/
+│   ├── megalinter.yml             # Reusable code quality workflow
 │   ├── python-ci.yml              # Reusable CI workflow
 │   ├── python-build-docker.yml    # Reusable Docker workflow
 │   ├── python-build-wheel.yml     # Reusable wheel workflow
 │   └── README.md                  # Detailed workflow documentation
+├── .mega-linter.yml               # Default MegaLinter configuration
 └── README.md                      # This file
 ```
 
@@ -95,6 +122,7 @@ See [`.github/workflows/README.md`](.github/workflows/README.md) for:
 
 | Use Case | Workflow | Triggered On |
 |----------|----------|-------------|
+| Lint, format, security scan | `megalinter.yml` | Every PR to main |
 | Run tests, lint, type-check | `python-ci.yml` | Every push/PR to main |
 | Build & push Docker image | `python-build-docker.yml` | Version tag (v*.*.*) |
 | Build & publish Python wheel | `python-build-wheel.yml` | Version tag (v*.*.*) |
