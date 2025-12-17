@@ -11,26 +11,6 @@ on:
         type: string
         description: 'Directory containing tests (e.g., tests)'
         default: 'tests'
-      source-dir:
-        type: string
-        description: 'Source directory to lint/type-check (e.g., tradingcz)'
-        default: 'tradingcz'
-      run-pylint:
-        type: boolean
-        description: 'Run pylint checks'
-        default: true
-      pylint-target-score:
-        type: number
-        description: 'Target pylint score (e.g., 10.0)'
-        default: 10.0
-      run-mypy:
-        type: boolean
-        description: 'Run mypy type checking'
-        default: true
-      run-ruff:
-        type: boolean
-        description: 'Run ruff linting'
-        default: true
 
 jobs:
   dependencies:
@@ -78,48 +58,3 @@ jobs:
       - name: Run tests
         run: pytest ${{ inputs.test-dir }} -v
         continue-on-error: true
-
-  lint:
-    runs-on: ubuntu-latest
-    if: inputs.run-pylint || inputs.run-ruff
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ inputs.python-version }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install .[dev]
-
-      - name: Run pylint
-        if: inputs.run-pylint
-        run: python -m pylint ${{ inputs.source-dir }} --disable=import-error
-
-      - name: Run ruff check
-        if: inputs.run-ruff
-        run: ruff check ${{ inputs.source-dir }}
-
-  type-check:
-    runs-on: ubuntu-latest
-    if: inputs.run-mypy
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: ${{ inputs.python-version }}
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install .[dev]
-
-      - name: Run mypy
-        run: mypy ${{ inputs.source-dir }}

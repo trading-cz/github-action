@@ -4,9 +4,11 @@ Centralized Python CI/CD workflows for trading-cz projects.
 
 ## Available Workflows
 
-### 1. `python-ci.yml` — Continuous Integration
+### 1. `python-ci.yml`  Continuous Integration
 
-Runs dependency checks, linting, type checking, and tests on all pushes/PRs.
+Runs dependency checks, audits for vulnerabilities, and executes tests.
+
+**Note:** Linting, type checking, and code formatting are handled by `megalinter.yml` workflow.
 
 **Usage:**
 
@@ -22,13 +24,10 @@ on:
 
 jobs:
   ci:
-    uses: trading-cz/github-actions/.github/workflows/python-ci.yml@main
+    uses: trading-cz/github-action/.github/workflows/python-ci.yml@main
     with:
-      python-version: '3.12'
-      source-dir: tradingcz
+      python-version: ''3.12''
       test-dir: tests
-      run-pylint: true
-      pylint-target-score: 10.0
 ```
 
 **Inputs:**
@@ -37,22 +36,15 @@ jobs:
 |-------|------|---------|-------------|
 | `python-version` | string | `3.12` | Python version (e.g., `3.12`, `3.11`) |
 | `test-dir` | string | `tests` | Directory containing test files |
-| `source-dir` | string | `tradingcz` | Source directory to lint/type-check |
-| `run-pylint` | boolean | `true` | Enable pylint checks |
-| `pylint-target-score` | number | `10.0` | Target pylint score (informational) |
-| `run-mypy` | boolean | `true` | Enable mypy type checking |
-| `run-ruff` | boolean | `true` | Enable ruff linting |
 
 **Jobs:**
 
-- **dependencies** — Checks for conflicts and audits vulnerabilities
-- **test** — Runs pytest
-- **lint** — Runs pylint and ruff
-- **type-check** — Runs mypy
+- **dependencies**  Checks for conflicts, validates dependency tree, audits for vulnerabilities
+- **test**  Runs pytest
 
 ---
 
-### 2. `python-build-docker.yml` — Docker Build & Push
+### 2. `python-build-docker.yml`  Docker Build & Push
 
 Builds multi-arch Docker image and pushes to container registry (GHCR).  
 Runs on version tags (`v*.*.*`) or manual dispatch.
@@ -66,21 +58,21 @@ name: Build and Push Docker Image
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - ''v*.*.*''
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version tag (e.g., v0.0.1)'
+        description: ''Version tag (e.g., v0.0.1)''
         required: true
         type: string
 
 jobs:
   build-and-push:
-    uses: trading-cz/github-actions/.github/workflows/python-build-docker.yml@main
+    uses: trading-cz/github-action/.github/workflows/python-build-docker.yml@main
     with:
-      python-version: '3.12'
-      dockerfile-path: 'Dockerfile'
-      registry: 'ghcr.io'
+      python-version: ''3.12''
+      dockerfile-path: ''Dockerfile''
+      registry: ''ghcr.io''
       image-name: ${{ github.repository }}
 ```
 
@@ -88,10 +80,10 @@ jobs:
 
 | Input | Type | Default | Required | Description |
 |-------|------|---------|----------|-------------|
-| `python-version` | string | `3.12` | ❌ | Python version |
-| `dockerfile-path` | string | `Dockerfile` | ❌ | Path to Dockerfile |
-| `registry` | string | `ghcr.io` | ❌ | Container registry |
-| `image-name` | string | — | ✅ | Image name (e.g., `owner/repo`) |
+| `python-version` | string | `3.12` |  | Python version |
+| `dockerfile-path` | string | `Dockerfile` |  | Path to Dockerfile |
+| `registry` | string | `ghcr.io` |  | Container registry |
+| `image-name` | string |  |  | Image name (e.g., `owner/repo`) |
 
 **Outputs:**
 
@@ -102,12 +94,12 @@ jobs:
 
 **Jobs:**
 
-- **test** — Runs tests before building
-- **build-and-push** — Builds & pushes multi-arch image (amd64, arm64) to registry
+- **test**  Runs tests before building
+- **build-and-push**  Builds & pushes multi-arch image (amd64, arm64) to registry
 
 **Features:**
 
-- Extracts version from git tag (e.g., `v0.0.4` → `0.0.4`)
+- Extracts version from git tag (e.g., `v0.0.4`  `0.0.4`)
 - Prevents overwriting existing versions
 - Builds for `linux/amd64` and `linux/arm64`
 - Uses GitHub Actions cache for faster builds
@@ -115,7 +107,7 @@ jobs:
 
 ---
 
-### 3. `python-build-wheel.yml` — Python Wheel Build & Push
+### 3. `python-build-wheel.yml`  Python Wheel Build & Push
 
 Builds Python package (wheel) and publishes to GitHub Releases.  
 Runs on version tags (`v*.*.*`) or manual dispatch.
@@ -129,20 +121,20 @@ name: Build and Push Python Package
 on:
   push:
     tags:
-      - 'v*.*.*'
+      - ''v*.*.*''
   workflow_dispatch:
     inputs:
       version:
-        description: 'Version tag (e.g., v0.0.1)'
+        description: ''Version tag (e.g., v0.0.1)''
         required: true
         type: string
 
 jobs:
   build-and-push:
-    uses: trading-cz/github-actions/.github/workflows/python-build-wheel.yml@main
+    uses: trading-cz/github-action/.github/workflows/python-build-wheel.yml@main
     with:
-      python-version: '3.12'
-      pyproject-path: 'pyproject.toml'
+      python-version: ''3.12''
+      pyproject-path: ''pyproject.toml''
 ```
 
 **Inputs:**
@@ -160,8 +152,8 @@ jobs:
 
 **Jobs:**
 
-- **verify-generated-models** — Ensures `src/tradingcz/model/kafka/` exists (model-specific check)
-- **build-and-push** — Builds wheel, updates version in pyproject.toml, publishes to GitHub Releases
+- **verify-generated-models**  Ensures `src/tradingcz/model/kafka/` exists (model-specific check)
+- **build-and-push**  Builds wheel, updates version in pyproject.toml, publishes to GitHub Releases
 
 **Features:**
 
@@ -173,11 +165,34 @@ jobs:
 
 ---
 
-## Examples
+### 4. `megalinter.yml`  Comprehensive Code Quality & Linting
+
+Validates and auto-fixes code quality issues (linting, formatting, type checking).  
+Runs on all PRs and pushes to main.
+
+**Configuration:** `.mega-linter.yml` + `.github/actionlint.yaml`
+
+**Linters Enabled:**
+- **Python:** Pylint, Black, Mypy, Ruff
+- **YAML:** Prettier
+- **Markdown:** MarkdownLint
+- **GitHub Actions:** ActionLint
+
+**Features:**
+- Auto-fixes applicable issues
+- Auto-commits fixes back to branch/PR
+- Posts results in PR comments
+- Uploads reports as artifacts
+- Concurrency control (cancels old runs)
+
+**Usage:**
+This workflow runs automaticallyno configuration needed in calling repos.
+
+---
+
+## Integration Examples
 
 ### ingestion-alpaca
-
-Caller workflows:
 
 ```yaml
 # .github/workflows/ci.yml
@@ -191,42 +206,16 @@ on:
 
 jobs:
   ci:
-    uses: trading-cz/github-actions/.github/workflows/python-ci.yml@main
+    uses: trading-cz/github-action/.github/workflows/python-ci.yml@main
     with:
-      python-version: '3.12'
-      source-dir: tradingcz
+      python-version: ''3.12''
       test-dir: tests
-      run-pylint: true
-```
-
-```yaml
-# .github/workflows/build-and-push.yml
-name: Build and Push Docker Image
-
-on:
-  push:
-    tags:
-      - 'v*.*.*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag (e.g., v0.0.1)'
-        required: true
-        type: string
-
-jobs:
-  build:
-    uses: trading-cz/github-actions/.github/workflows/python-build-docker.yml@main
-    with:
-      image-name: ${{ github.repository }}
 ```
 
 ### model
 
-Caller workflows:
-
 ```yaml
-# .github/workflows/ci.yml (reuse same as ingestion-alpaca)
+# .github/workflows/ci.yml
 name: CI
 
 on:
@@ -237,54 +226,21 @@ on:
 
 jobs:
   ci:
-    uses: trading-cz/github-actions/.github/workflows/python-ci.yml@main
+    uses: trading-cz/github-action/.github/workflows/python-ci.yml@main
     with:
-      python-version: '3.12'
-      source-dir: 'src/tradingcz'
+      python-version: ''3.12''
       test-dir: tests
-```
-
-```yaml
-# .github/workflows/build-and-push.yml
-name: Build and Push Python Package
-
-on:
-  push:
-    tags:
-      - 'v*.*.*'
-  workflow_dispatch:
-    inputs:
-      version:
-        description: 'Version tag (e.g., v0.0.1)'
-        required: true
-        type: string
-
-jobs:
-  build:
-    uses: trading-cz/github-actions/.github/workflows/python-build-wheel.yml@main
-    with:
-      python-version: '3.12'
 ```
 
 ---
 
 ## Reference Versions
 
-Always pin to a specific ref for stability:
+Always pin to a specific ref:
 
 ```yaml
-uses: trading-cz/github-actions/.github/workflows/python-ci.yml@main
+uses: trading-cz/github-action/.github/workflows/python-ci.yml@main
 ```
 
-- `@main` — Latest version (recommended for quick fixes)
-- `@v1.0.0` — Specific release tag (recommended for production)
-
----
-
-## Notes
-
-- All workflows require `pyproject.toml` with `[project.optional-dependencies] dev` section
-- Docker workflow requires `Dockerfile` in repo root (or specify `dockerfile-path`)
-- Wheel workflow requires generated models at `src/tradingcz/model/kafka/` for model repo
-- GitHub token (`GITHUB_TOKEN`) is automatically provided by Actions
-- Container registry login uses `GITHUB_TOKEN` (no secrets needed for GHCR)
+- `@main`  Latest version
+- `@v1.0.0`  Specific release tag
