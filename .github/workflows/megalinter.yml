@@ -1,0 +1,92 @@
+# MegaLinter - Validate and auto-fix code quality
+# Runs on all PRs to enforce code standards across all files
+
+name: MegaLinter
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.ref }}-${{ github.workflow }}
+  cancel-in-progress: true
+
+jobs:
+  megalinter:
+    name: MegaLinter
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          fetch-depth: 0
+
+      - name: MegaLinter
+        id: ml
+        uses: oxsecurity/megalinter@v9.2.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VALIDATE_ALL_CODEBASE: true
+          APPLY_FIXES: all
+
+      - name: Commit and push applied linter fixes
+        if: steps.ml.outputs.has_updated_sources == 1 && github.event_name == 'pull_request'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "[MegaLinter] Apply linters auto-fixes"
+          git push
+
+      - name: Commit and push applied linter fixes (push event)
+        if: steps.ml.outputs.has_updated_sources == 1 && github.event_name == 'push'
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "[MegaLinter] Apply linters auto-fixes"
+          git push
+
+      - name: Archive MegaLinter reports
+        uses: actions/upload-artifact@v4
+        if: success() || failure()
+        with:
+          name: megalinter-reports
+          path: |
+            megalinter-reports
+            mega-linter.log
+
+      - name: Comment PR with MegaLinter Results
+        if: github.event_name == 'pull_request' && (success() || failure())
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const reportPath = 'megalinter-reports/SUMMARY.md';
+            
+            if (fs.existsSync(reportPath)) {
+              const summary = fs.readFileSync(reportPath, 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: summary
+              });
+            }
+
+      - name: MegaLinter Summary
+        run: |
+          echo "### 🔍 MegaLinter Report" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          if [ -f "megalinter-reports/SUMMARY.md" ]; then
+            cat megalinter-reports/SUMMARY.md >> $GITHUB_STEP_SUMMARY
+          else
+            echo "No issues found!" >> $GITHUB_STEP_SUMMARY
+          fi

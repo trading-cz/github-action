@@ -1,0 +1,13 @@
+# ActionLint configuration
+# For validating GitHub Actions workflows
+
+version: 1.0
+
+# Enable all rules
+rules:
+  braces:
+    min-spaces-inside: 0
+    max-spaces-inside: 0
+  line-length:
+    max: 120
+    level: warning

@@ -1,0 +1,49 @@
+# Configuration file for MegaLinter
+# See all available variables at https://megalinter.io/latest/config-file/
+
+# Apply fixes for formatters
+APPLY_FIXES: all
+APPLY_FIXES_EVENT: all
+APPLY_FIXES_MODE: commit
+
+# Validate all codebase
+VALIDATE_ALL_CODEBASE: true
+
+# Enable Python linters for any Python scripts we add
+ENABLE_LINTERS:
+  - ACTION_ACTIONLINT
+  - PYTHON_PYLINT
+  - PYTHON_BLACK
+  - PYTHON_MYPY
+  - PYTHON_RUFF
+  - YAML_PRETTIER
+  - MARKDOWN_MARKDOWNLINT
+
+# ActionLint configuration for workflow validation
+ACTION_ACTIONLINT_CONFIG_FILE: .github/actionlint.yaml
+
+# YAML formatting
+YAML_PRETTIER_ARGUMENTS: '--single-quote'
+
+# Python configuration
+PYTHON_PYLINT_CONFIG_FILE: .pylintrc
+PYTHON_BLACK_CONFIG_FILE: pyproject.toml
+PYTHON_MYPY_CONFIG_FILE: pyproject.toml
+PYTHON_RUFF_CONFIG_FILE: pyproject.toml
+
+# Display output options
+SHOW_ELAPSED_TIME: true
+SHOW_SKIPPED_LINTERS: true
+
+# Disable LLM advisor and flavor suggestions
+LLM_ADVISOR_ENABLED: false
+FLAVOR_SUGGESTIONS: false
+
+# Fail on errors (can set to true to be more strict)
+DISABLE_ERRORS: false
+
+# Post comment on PR
+POST_COMMENT: true
+
+# Show linter timings
+SHOW_LINTER_TIMINGS: true
