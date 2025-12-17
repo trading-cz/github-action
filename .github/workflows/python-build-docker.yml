@@ -1,0 +1,138 @@
+name: Python Build Docker (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        type: string
+        description: 'Python version to use'
+        default: '3.12'
+      dockerfile-path:
+        type: string
+        description: 'Path to Dockerfile'
+        default: 'Dockerfile'
+      registry:
+        type: string
+        description: 'Container registry (e.g., ghcr.io)'
+        default: 'ghcr.io'
+      image-name:
+        type: string
+        description: 'Image name (e.g., owner/repo)'
+        required: true
+    outputs:
+      version:
+        description: 'Docker image version tag'
+        value: ${{ jobs.build-and-push.outputs.version }}
+      digest:
+        description: 'Docker image digest'
+        value: ${{ jobs.build-and-push.outputs.digest }}
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install .[dev]
+
+      - name: Run tests
+        run: pytest tests/ -v
+
+  build-and-push:
+    runs-on: ubuntu-latest
+    needs: test
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      digest: ${{ steps.build-push.outputs.digest }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          else
+            VERSION="${GITHUB_REF#refs/tags/}"
+          fi
+          # Strip 'v' prefix if present (v0.0.4 -> 0.0.4)
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+          echo "📦 Building version: $VERSION"
+
+      - name: Check if version already exists
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          IMAGE="${{ inputs.registry }}/${{ inputs.image-name }}:${VERSION}"
+
+          echo "🔍 Checking if $IMAGE already exists..."
+
+          # Check via registry API
+          REPO_LOWER=$(echo "${{ inputs.image-name }}" | tr '[:upper:]' '[:lower:]')
+
+          HTTP_STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
+            -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "${{ inputs.registry }}/v2/${REPO_LOWER}/manifests/${VERSION}")
+
+          if [ "$HTTP_STATUS" == "200" ]; then
+            echo "❌ ERROR: Version $VERSION already exists in registry!"
+            echo ""
+            echo "Image: $IMAGE"
+            echo ""
+            echo "💡 Please use a new version tag. Overwriting versions is not allowed."
+            exit 1
+          elif [ "$HTTP_STATUS" == "404" ] || [ "$HTTP_STATUS" == "401" ]; then
+            echo "✅ Version $VERSION is available (not yet published)"
+          else
+            echo "⚠️ Unexpected response: HTTP $HTTP_STATUS (continuing anyway)"
+          fi
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ inputs.registry }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        id: build-push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ inputs.dockerfile-path }}
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: |
+            ${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.version.outputs.version }}
+            ${{ inputs.registry }}/${{ inputs.image-name }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Summary
+        run: |
+          echo "### 🐳 Docker Image Published" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Image:** \`${{ inputs.registry }}/${{ inputs.image-name }}:${{ steps.version.outputs.version }}\`" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Digest:** \`${{ steps.build-push.outputs.digest }}\`" >> $GITHUB_STEP_SUMMARY
