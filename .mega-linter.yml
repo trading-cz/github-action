@@ -60,5 +60,6 @@ FLAVOR_SUGGESTIONS: false
 # Fail on errors
 DISABLE_ERRORS: false
 
-# Post comment on PR
+# Post comment on PR - Let MegaLinter handle PR comments natively
+POST_COMMENT: true
 POST_COMMENT: true

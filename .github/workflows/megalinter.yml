@@ -90,24 +90,6 @@ jobs:
             megalinter-reports
             mega-linter.log
 
-      - name: Comment PR with MegaLinter Results
-        if: github.event_name == 'pull_request' && (success() || failure())
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const fs = require('fs');
-            const reportPath = 'megalinter-reports/SUMMARY.md';
-            
-            if (fs.existsSync(reportPath)) {
-              const summary = fs.readFileSync(reportPath, 'utf8');
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: summary
-              });
-            }
-
       - name: MegaLinter Summary
         run: |
           echo "### 🔍 MegaLinter Report" >> $GITHUB_STEP_SUMMARY
