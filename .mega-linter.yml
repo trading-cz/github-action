@@ -44,6 +44,8 @@ PYTHON_ISORT_CONFIG_FILE: pyproject.toml
 PYTHON_MYPY_CONFIG_FILE: pyproject.toml
 PYTHON_RUFF_CONFIG_FILE: pyproject.toml
 PYTHON_PYLINT_CONFIG_FILE: .pylintrc
+# Exclude .github scripts and tests from pylint (they have separate standards)
+PYTHON_PYLINT_FILTER_REGEX_EXCLUDE: ".github/script/.*|tests/.*"
 
 # YAML formatting
 YAML_PRETTIER_ARGUMENTS: '--single-quote'
