@@ -39,6 +39,27 @@ The workflow will:
 
 **Optional:** Create `.mega-linter.yml` in your repo to customize which linters run.
 
+#### MegaLinter Image Options
+
+The `megalinter.yml` workflow uses **Python flavor** by default for faster pull times. Choose based on your needs:
+
+| Image | Size | Pull Time | Use Case |
+|-------|------|-----------|----------|
+| `oxsecurity/megalinter/flavors/python@v9` | ~500MB | 30-60 sec | Python projects ✓ **Recommended** |
+| `oxsecurity/megalinter@v9.2.0` | ~3GB | ~5 min | Multi-language projects (Go, Java, Ruby, etc.) |
+
+**Default (Python Flavor - Recommended):**
+```yaml
+uses: oxsecurity/megalinter/flavors/python@v9
+```
+Includes: ruff, pylint, black, mypy, isort, markdownlint, yamllint, gitleaks, trivy, lychee
+
+**Full Image (if needed for multiple languages):**
+```yaml
+uses: oxsecurity/megalinter@v9.2.0
+```
+Includes everything + Go, JavaScript, Java, Ruby, PHP, etc.
+
 ### Add CI workflow to your repo
 
 Create `.github/workflows/ci.yml` in your repository:
