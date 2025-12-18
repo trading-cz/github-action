@@ -47,6 +47,9 @@ PYTHON_PYLINT_CONFIG_FILE: .pylintrc
 # Exclude .github scripts and tests from pylint (they have separate standards)
 PYTHON_PYLINT_FILTER_REGEX_EXCLUDE: ".github/script/.*|tests/.*"
 
+# Markdown configuration - ignore doc folders in all repos
+MARKDOWN_MARKDOWNLINT_FILTER_REGEX_EXCLUDE: "doc/"
+
 # YAML formatting
 YAML_PRETTIER_ARGUMENTS: '--single-quote'
 
