@@ -62,4 +62,3 @@ DISABLE_ERRORS: false
 
 # Post comment on PR - Let MegaLinter handle PR comments natively
 POST_COMMENT: true
-POST_COMMENT: true
