@@ -72,15 +72,6 @@ jobs:
           git commit -m "[MegaLinter] Apply linters auto-fixes"
           git push
 
-      - name: Commit and push applied linter fixes (push event)
-        if: steps.ml.outputs.has_updated_sources == 1 && github.event_name == 'push'
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add -A
-          git commit -m "[MegaLinter] Apply linters auto-fixes"
-          git push
-
       - name: Archive MegaLinter reports
         uses: actions/upload-artifact@v4
         if: success() || failure()
