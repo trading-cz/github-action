@@ -1,10 +1,9 @@
 # MegaLinter - Validate and auto-fix code quality
 # Runs on all PRs to enforce code standards across all files
 #
-# Features:
-# - Automatically installs project dependencies if pyproject.toml exists
-#   (enables mypy type checking and full linter context)
-# - Repositories can customize linters by providing a .mega-linter.yml file
+# Configuration in .mega-linter.yml:
+# - Auto-detects and installs dependencies from pyproject.toml
+# - Repositories can customize linters by providing their own .mega-linter.yml file
 # - Default configuration includes essential checks only
 
 name: MegaLinter
@@ -60,40 +59,11 @@ jobs:
           echo "✓ Using default config from github-action"
           rm -rf .github-action-defaults
 
-      - name: Check for pyproject.toml
-        id: pyproject
-        uses: dorny/paths-filter@v3
-        with:
-          filters: |
-            toml:
-              - 'pyproject.toml'
-          list-files: shell
-
-      - name: Set up Python for dependencies
-        if: steps.pyproject.outputs.toml == 'true'
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.12'
-
-      - name: Install project dependencies
-        if: steps.pyproject.outputs.toml == 'true'
-        run: |
-          echo "📦 Installing dependencies from pyproject.toml..."
-          python -m pip install --upgrade pip
-          pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null || echo "⚠️  Could not install dependencies (optional)"
-          echo "✓ Dependencies installed"
-
       - name: MegaLinter
         id: ml
         uses: oxsecurity/megalinter/flavors/python@v9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          # Install dependencies inside MegaLinter container before linting
-          PRE_RUN_COMMANDS: |
-            pip install --upgrade pip
-            if [ -f "pyproject.toml" ]; then
-              pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null || true
-            fi
 
       - name: Commit and push applied linter fixes
         if: steps.ml.outputs.has_updated_sources == 1 && github.event_name == 'pull_request'

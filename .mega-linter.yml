@@ -67,3 +67,13 @@ DISABLE_ERRORS: false
 
 # Post comment on PR - Let MegaLinter handle PR comments natively
 POST_COMMENT: true
+# Pre-commands: Install Python dependencies before linting
+# Allows pylint and mypy to resolve all imports properly
+PRE_COMMANDS:
+  - command: pip install --upgrade pip
+    cwd: "root"
+  - command: |
+      if [ -f "pyproject.toml" ]; then
+        pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null || echo "⚠️  Could not install dependencies"
+      fi
+    cwd: "workspace"
