@@ -69,22 +69,40 @@ DISABLE_ERRORS: false
 POST_COMMENT: true
 # Pre-commands: Install native dependencies and Python packages before linting
 # MegaLinter (Alpine-based) needs librdkafka-dev and build tools to compile confluent-kafka
+# Includes verification steps and explicit confluent-kafka install
 PRE_COMMANDS:
+  # 1) Toolchain + librdkafka + pkgconf (pkg-config) + common codecs/SSL/SASL
   - command: |
+      set -eux
       apk add --no-cache \
-        build-base python3-dev \
+        build-base python3-dev pkgconf \
         librdkafka-dev \
         openssl-dev zlib-dev lz4-dev zstd-dev \
         cyrus-sasl-dev curl-dev
+      # Sanity checks: confirm librdkafka is installed & visible to pkg-config
+      apk info -e librdkafka-dev
+      pkg-config --modversion rdkafka
+      pkg-config --libs rdkafka
     cwd: root
     run_before_linters: true
     continue_if_failed: false
+
+  # 2) Keep pip tooling current
   - command: python3 -m pip install --upgrade pip setuptools wheel
     cwd: root
     run_before_linters: true
+
+  # 3) Install confluent-kafka explicitly (no stderr suppression, show why it fails if it does)
+  #    Pin to 3.13-compatible version
+  - command: python3 -m pip install "confluent-kafka>=2.6.0"
+    cwd: workspace
+    run_before_linters: true
+    continue_if_failed: false
+
+  # 4) Now install your project (avoid hiding errors)
   - command: |
       if [ -f "pyproject.toml" ]; then
-        python3 -m pip install -e ".[dev]" 2>/dev/null || python3 -m pip install -e . 2>/dev/null || echo "⚠️  Could not install dependencies"
+        python3 -m pip install -e ".[dev]" || python3 -m pip install -e .
       fi
     cwd: workspace
     run_before_linters: true
