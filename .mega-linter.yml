@@ -67,13 +67,24 @@ DISABLE_ERRORS: false
 
 # Post comment on PR - Let MegaLinter handle PR comments natively
 POST_COMMENT: true
-# Pre-commands: Install Python dependencies before linting
-# Allows pylint and mypy to resolve all imports properly
+# Pre-commands: Install native dependencies and Python packages before linting
+# MegaLinter (Alpine-based) needs librdkafka-dev and build tools to compile confluent-kafka
 PRE_COMMANDS:
-  - command: pip install --upgrade pip
-    cwd: "root"
+  - command: |
+      apk add --no-cache \
+        build-base python3-dev \
+        librdkafka-dev \
+        openssl-dev zlib-dev lz4-dev zstd-dev \
+        cyrus-sasl-dev curl-dev
+    cwd: root
+    run_before_linters: true
+    continue_if_failed: false
+  - command: python3 -m pip install --upgrade pip setuptools wheel
+    cwd: root
+    run_before_linters: true
   - command: |
       if [ -f "pyproject.toml" ]; then
-        pip install --prefer-binary -e ".[dev]" 2>/dev/null || pip install --prefer-binary -e . 2>/dev/null || echo "⚠️  Could not install dependencies"
+        python3 -m pip install -e ".[dev]" 2>/dev/null || python3 -m pip install -e . 2>/dev/null || echo "⚠️  Could not install dependencies"
       fi
-    cwd: "workspace"
+    cwd: workspace
+    run_before_linters: true
