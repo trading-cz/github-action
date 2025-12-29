@@ -74,6 +74,6 @@ PRE_COMMANDS:
     cwd: "root"
   - command: |
       if [ -f "pyproject.toml" ]; then
-        pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null || echo "⚠️  Could not install dependencies"
+        pip install --prefer-binary -e ".[dev]" 2>/dev/null || pip install --prefer-binary -e . 2>/dev/null || echo "⚠️  Could not install dependencies"
       fi
     cwd: "workspace"
