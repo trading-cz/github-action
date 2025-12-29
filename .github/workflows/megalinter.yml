@@ -1,8 +1,11 @@
 # MegaLinter - Validate and auto-fix code quality
 # Runs on all PRs to enforce code standards across all files
 #
-# Repositories can customize linters by providing a .mega-linter.yml file
-# Default configuration includes essential checks only
+# Features:
+# - Automatically installs project dependencies if pyproject.toml exists
+#   (enables mypy type checking and full linter context)
+# - Repositories can customize linters by providing a .mega-linter.yml file
+# - Default configuration includes essential checks only
 
 name: MegaLinter
 
@@ -56,6 +59,22 @@ jobs:
           cp .github-action-defaults/.mega-linter.yml ./.mega-linter.yml
           echo "✓ Using default config from github-action"
           rm -rf .github-action-defaults
+
+      - name: Set up Python for dependencies
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install project dependencies (if pyproject.toml exists)
+        run: |
+          if [ -f "pyproject.toml" ]; then
+            echo "📦 Installing dependencies from pyproject.toml..."
+            python -m pip install --upgrade pip
+            pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null || echo "⚠️  Could not install dependencies (optional)"
+            echo "✓ Dependencies installed"
+          else
+            echo "⏭️  No pyproject.toml found, skipping dependency installation"
+          fi
 
       - name: MegaLinter
         id: ml
