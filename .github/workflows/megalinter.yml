@@ -60,21 +60,28 @@ jobs:
           echo "✓ Using default config from github-action"
           rm -rf .github-action-defaults
 
+      - name: Check for pyproject.toml
+        id: pyproject
+        uses: dorny/paths-filter@v3
+        with:
+          filters: |
+            toml:
+              - 'pyproject.toml'
+          list-files: shell
+
       - name: Set up Python for dependencies
+        if: steps.pyproject.outputs.toml == 'true'
         uses: actions/setup-python@v5
         with:
           python-version: '3.12'
 
-      - name: Install project dependencies (if pyproject.toml exists)
+      - name: Install project dependencies
+        if: steps.pyproject.outputs.toml == 'true'
         run: |
-          if [ -f "pyproject.toml" ]; then
-            echo "📦 Installing dependencies from pyproject.toml..."
-            python -m pip install --upgrade pip
-            pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null || echo "⚠️  Could not install dependencies (optional)"
-            echo "✓ Dependencies installed"
-          else
-            echo "⏭️  No pyproject.toml found, skipping dependency installation"
-          fi
+          echo "📦 Installing dependencies from pyproject.toml..."
+          python -m pip install --upgrade pip
+          pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null || echo "⚠️  Could not install dependencies (optional)"
+          echo "✓ Dependencies installed"
 
       - name: MegaLinter
         id: ml
