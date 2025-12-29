@@ -88,6 +88,12 @@ jobs:
         uses: oxsecurity/megalinter/flavors/python@v9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Install dependencies inside MegaLinter container before linting
+          PRE_RUN_COMMANDS: |
+            pip install --upgrade pip
+            if [ -f "pyproject.toml" ]; then
+              pip install -e ".[dev]" 2>/dev/null || pip install -e . 2>/dev/null || true
+            fi
 
       - name: Commit and push applied linter fixes
         if: steps.ml.outputs.has_updated_sources == 1 && github.event_name == 'pull_request'
