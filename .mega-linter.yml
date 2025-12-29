@@ -120,3 +120,8 @@ PRE_COMMANDS:
       fi
     cwd: workspace
     run_before_linters: true
+
+# Environment variables for linters to find installed packages
+env:
+  PYTHONPATH: "/usr/local/lib/python3.13/site-packages:${PYTHONPATH:-}"
+  LD_LIBRARY_PATH: "/usr/local/lib:${LD_LIBRARY_PATH:-}"
