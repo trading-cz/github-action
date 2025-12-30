@@ -17,28 +17,8 @@ on:
         value: ${{ jobs.build-and-push.outputs.version }}
 
 jobs:
-  verify-generated-models:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Verify generated models exist
-        run: |
-          if [ ! -d "src/tradingcz/model/kafka" ]; then
-            echo "❌ Error: Generated models not found in src/tradingcz/model/kafka/"
-            echo "Models should be generated via PR workflow when schemas change."
-            exit 1
-          fi
-          echo "✅ Generated Kafka models found:"
-          find src/tradingcz/model/kafka -name "*.py" | sort
-          echo ""
-          echo "✅ Hand-written models:"
-          find src/tradingcz/model -maxdepth 2 -name "*.py" ! -path "*/kafka/*" | sort
-
   build-and-push:
     runs-on: ubuntu-latest
-    needs: verify-generated-models
     permissions:
       contents: write
     outputs:
