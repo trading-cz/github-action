@@ -38,9 +38,18 @@ jobs:
           else
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
+      
+      - name: Check for .pylintrc
+        id: pylintrc
+        run: |
+          if [ -f ".pylintrc" ]; then
+            echo "exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "exists=false" >> $GITHUB_OUTPUT
+          fi
 
       - name: Checkout github-action defaults
-        if: steps.config.outputs.exists == 'false'
+        if: steps.config.outputs.exists == 'false' || steps.pylintrc.outputs.exists == 'false'
         uses: actions/checkout@v4
         with:
           repository: trading-cz/github-action
@@ -57,7 +66,27 @@ jobs:
         run: |
           cp .github-action-defaults/.mega-linter.yml ./.mega-linter.yml
           echo "✓ Using default config from github-action"
-          rm -rf .github-action-defaults
+
+      - name: Setup .pylintrc config - Use repository config
+        if: steps.pylintrc.outputs.exists == 'true'
+        run: |
+          echo "✓ Using repository's own .pylintrc"
+
+      - name: Setup .pylintrc config - Use github-action defaults
+        if: steps.pylintrc.outputs.exists == 'false'
+        run: |
+          cp .github-action-defaults/.pylintrc ./.pylintrc
+          echo "✓ Using default .pylintrc from github-action"
+
+      - name: Cleanup github-action-defaults
+        if: steps.config.outputs.exists == 'false' || steps.pylintrc.outputs.exists == 'false'
+        run: |
+          if [ -d ".github-action-defaults" ]; then
+            rm -rf .github-action-defaults
+            echo "✓ Removed .github-action-defaults"
+          else
+            echo "No defaults directory to remove"
+          fi
 
       - name: MegaLinter
         id: ml
