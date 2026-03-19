@@ -1,0 +1,38 @@
+[MASTER]
+# Ignore patterns - use ignore instead of ignore-paths
+ignore=
+    .github,
+    tests
+ignore-patterns=^\.#
+
+[MESSAGES CONTROL]
+disable=
+    C0114,  # missing-module-docstring
+    C0115,  # missing-class-docstring (data models are self-documenting)
+    C0116,  # missing-function-docstring
+    C0104,  # disallowed-name (business terms: 'bar', 'quote', 'trade' are domain essentials)
+    R0903,  # too-few-public-methods (domain models intentionally data-only)
+    R0912,  # too-many-branches (complex business logic)
+    R0913,  # too-many-arguments (data-heavy methods)
+    R0914,  # too-many-locals (complex functions)
+    R0915,  # too-many-statements (implementation-heavy functions)
+    R0917,  # too-many-positional-arguments (data-heavy methods)
+    R0801,  # duplicate-code (common __all__ patterns across response models)
+    C0415,  # import-outside-toplevel (lazy imports in conversion functions)
+    W0718,  # broad-exception-caught (catch-all exceptions in error handlers)
+    C0303,  # trailing-whitespace
+    C0301,  # line-too-long (handled by ruff)
+    C0305,  # trailing-newlines
+    W0511,  # fixme (allow TODO comments)
+    E0401,  # import-error (external dependencies may not be installed in analysis environment)
+    W1203,  # logging-fstring-interpolation (f-strings ok with lazy evaluation)
+
+[FORMAT]
+max-line-length=100
+
+[DESIGN]
+max-attributes=10
+
+[VARIABLES]
+# Minimum confidence required to accept a message as valid inference for inference failures
+min-similarity-lines=4
