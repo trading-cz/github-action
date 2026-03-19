@@ -75,12 +75,16 @@ on:
 
 jobs:
   ci:
-    uses: trading-cz/github-actions/.github/workflows/python-ci.yml@main
+    uses: trading-cz/github-action/.github/workflows/python-ci.yml@main
+    permissions:
+      contents: read
+      pull-requests: write
     with:
       python-version: '3.12'
-      source-dir: tradingcz
       test-dir: tests
 ```
+
+**Note:** The `permissions` block is required if you want coverage reports posted as PR comments. Permissions must be set at the caller level for reusable workflows.
 
 ### Add Docker build workflow to your repo
 
