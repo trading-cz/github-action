@@ -74,20 +74,17 @@ jobs:
           name: coverage-xml
           path: coverage.xml
 
-      - name: Generate text coverage summary
-        run: coverage report > coverage.txt
+      - name: Generate coverage markdown summary
+        run: coverage report --format=markdown > coverage.md
 
       - name: Display coverage summary in GitHub job
-        run: |
-          echo "### Test Coverage Summary" >> $GITHUB_STEP_SUMMARY
-          cat coverage.txt >> $GITHUB_STEP_SUMMARY
-
+        run: cat coverage.md >> $GITHUB_STEP_SUMMARY
 
       - name: Comment coverage summary on PR
         if: ${{ github.event_name == 'pull_request' }}
         uses: thollander/actions-comment-pull-request@v3
         with:
-          file-path: coverage.txt
+          file-path: coverage.md
           comment-tag: coverage
           mode: recreate
           reactions: eyes
