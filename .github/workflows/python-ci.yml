@@ -58,21 +58,15 @@ jobs:
         run: |
           pytest ${{ inputs.test-dir }} -v \
             --cov=tradingcz \
-            --cov-report=xml \
             --cov-report=term \
             --cov-report=html
 
       - name: Upload coverage report (HTML)
         uses: actions/upload-artifact@v5
         with:
-          name: coverage-html
+          name: coverage-report
           path: htmlcov/
-
-      - name: Upload coverage XML
-        uses: actions/upload-artifact@v5
-        with:
-          name: coverage-xml
-          path: coverage.xml
+          compression-level: 0
 
       - name: Generate coverage markdown summary
         run: coverage report --format=markdown > coverage.md
@@ -83,8 +77,6 @@ jobs:
       - name: Comment coverage summary on PR
         if: ${{ github.event_name == 'pull_request' }}
         uses: thollander/actions-comment-pull-request@v3
-        env:
-          FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
         with:
           file-path: coverage.md
           comment-tag: coverage
