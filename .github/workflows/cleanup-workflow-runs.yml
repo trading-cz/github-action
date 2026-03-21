@@ -1,0 +1,76 @@
+name: Cleanup Workflow Runs (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      days-to-keep:
+        type: number
+        description: 'Delete runs older than this many days (default: 30)'
+        default: 30
+      dry-run:
+        type: boolean
+        description: 'If true, only list runs that would be deleted without deleting them'
+        default: false
+    secrets:
+      token:
+        description: 'GitHub token with actions:write scope (PAT or GITHUB_TOKEN)'
+        required: true
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Delete old workflow runs
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+          GH_REPO: ${{ github.repository }}
+          DAYS_TO_KEEP: ${{ inputs.days-to-keep }}
+          DRY_RUN: ${{ inputs.dry-run }}
+        run: |
+          set -euo pipefail
+
+          cutoff_date=$(date -u -d "${DAYS_TO_KEEP} days ago" +%Y-%m-%dT%H:%M:%SZ)
+          echo "Cutoff date: ${cutoff_date} (runs older than ${DAYS_TO_KEEP} days)"
+          echo "Repository:  ${GH_REPO}"
+          echo "Dry-run:     ${DRY_RUN}"
+          echo ""
+
+          deleted=0
+          page=1
+
+          while true; do
+            run_ids=$(gh run list \
+              --limit 100 \
+              --json databaseId,createdAt,workflowName,status \
+              -q "[.[] | select(.createdAt < \"${cutoff_date}\")] | .[].databaseId" \
+            )
+
+            if [ -z "${run_ids}" ]; then
+              echo "No more old runs found."
+              break
+            fi
+
+            for id in ${run_ids}; do
+              if [ "${DRY_RUN}" = "true" ]; then
+                echo "[DRY-RUN] Would delete run ${id}"
+              else
+                gh run delete "${id}" && echo "Deleted run ${id}" || echo "Failed to delete run ${id}"
+              fi
+              deleted=$((deleted + 1))
+            done
+
+            page=$((page + 1))
+            # Safety: stop after 50 pages (5000 runs) to avoid runaway loops
+            if [ "${page}" -gt 50 ]; then
+              echo "Reached page limit (50). Re-run to continue cleanup."
+              break
+            fi
+          done
+
+          echo ""
+          if [ "${DRY_RUN}" = "true" ]; then
+            echo "Dry-run complete. ${deleted} run(s) would be deleted."
+          else
+            echo "Done. Deleted ${deleted} run(s)."
+          fi
