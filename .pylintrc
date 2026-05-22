@@ -18,6 +18,9 @@ disable=
     R0915,  # too-many-statements (implementation-heavy functions)
     R0917,  # too-many-positional-arguments (data-heavy methods)
     R0801,  # duplicate-code (common __all__ patterns across response models)
+    C0411,  # wrong-import-order (handled by ruff/isort)
+    C0412,  # ungrouped-imports (handled by ruff/isort)
+    C0413,  # wrong-import-position (handled by ruff/isort)
     C0415,  # import-outside-toplevel (lazy imports in conversion functions)
     W0718,  # broad-exception-caught (catch-all exceptions in error handlers)
     C0303,  # trailing-whitespace
