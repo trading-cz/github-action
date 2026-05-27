@@ -11,6 +11,10 @@ on:
         type: string
         description: 'Directory containing tests (e.g., tests)'
         default: 'tests'
+      pip-audit-ignore:
+        type: string
+        description: 'Space-separated vulnerability IDs to ignore (e.g., PYSEC-2026-161)'
+        default: ''
 
 permissions:
   contents: read
@@ -41,7 +45,16 @@ jobs:
         run: pipdeptree --warn fail
 
       - name: Audit for known vulnerabilities
-        run: python -m pip_audit --desc on
+        env:
+          PIP_AUDIT_IGNORE: ${{ inputs.pip-audit-ignore }}
+        run: |
+          PIP_AUDIT_ARGS="--desc on"
+          if [ -n "$PIP_AUDIT_IGNORE" ]; then
+            for VULN_ID in $PIP_AUDIT_IGNORE; do
+              PIP_AUDIT_ARGS="$PIP_AUDIT_ARGS --ignore-vuln $VULN_ID"
+            done
+          fi
+          python -m pip_audit $PIP_AUDIT_ARGS
 
   test:
     runs-on: ubuntu-latest
