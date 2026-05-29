@@ -6,28 +6,17 @@ ignore=
 ignore-patterns=^\.#
 
 [MESSAGES CONTROL]
+# Focus on Errors (E) and Warnings (W) only during development.
+# Convention (C) and Refactor (R) are globally disabled — they produce
+# too much noise (line-too-long, consider-using-f-string, no-else-return,
+# too-many-*) and are handled by ruff/black/isort for formatting.
 disable=
-    C0104,  # disallowed-name (business terms: 'bar', 'quote', 'trade' are domain essentials)    
-    C0114,  # missing-module-docstring
-    C0115,  # missing-class-docstring (data models are self-documenting)
-    C0116,  # missing-function-docstring
-    C0303,  # trailing-whitespace
-    C0305,  # trailing-newlines    
-    C0411,  # wrong-import-order (handled by ruff/isort)
-    C0412,  # ungrouped-imports (handled by ruff/isort)
-    C0413,  # wrong-import-position (handled by ruff/isort)
-    C0415,  # import-outside-toplevel (lazy imports in conversion functions)    
-    R0801,  # duplicate-code (common __all__ patterns across response models)    
-    R0903,  # too-few-public-methods (domain models intentionally data-only)
-    R0912,  # too-many-branches (complex business logic)
-    R0913,  # too-many-arguments (data-heavy methods)
-    R0914,  # too-many-locals (complex functions)
-    R0915,  # too-many-statements (implementation-heavy functions)
-    R0917,  # too-many-positional-arguments (data-heavy methods)
-    W0511,  # fixme (allow TODO comments)
-    W0718,  # broad-exception-caught (catch-all exceptions in error handlers)
-    W1203,  # logging-fstring-interpolation (f-strings ok with lazy evaluation)
-    E0401,  # import-error (external dependencies may not be installed in analysis environment)
+    C,       # All convention messages (coding style, naming, formatting)
+    R,       # All refactor messages (code smells, design suggestions)
+    W0511,   # fixme (allow TODO comments)
+    W0718,   # broad-exception-caught (catch-all exceptions in error handlers)
+    W1203,   # logging-fstring-interpolation (f-strings ok with lazy evaluation)
+    E0401,   # import-error (external dependencies may not be installed in analysis environment)
 
 [FORMAT]
 max-line-length=250
