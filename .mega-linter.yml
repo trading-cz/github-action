@@ -1,5 +1,10 @@
 # Configuration file for MegaLinter - github_action repository
 # See all available variables at https://megalinter.io/latest/config-file/
+#
+# Philosophy: Focus on Errors and Warnings during development.
+# - pylint: C (Convention) and R (Refactor) globally disabled via .pylintrc
+# - ruff: Configured per-repo in pyproject.toml (E, W, F, I, B, C4, UP)
+# - Formatters (BLACK, ISORT, YAML_PRETTIER): Kept for auto-fix, not noise
 
 # Apply fixes for formatters
 APPLY_FIXES: all
