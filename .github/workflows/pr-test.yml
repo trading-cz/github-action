@@ -11,11 +11,6 @@ on:
         description: "Short name for result comment"
         required: true
         type: string
-      start_command:
-        description: "Shell command to start the app (runnable only)"
-        required: false
-        type: string
-        default: ""
       start_env:
         description: "Env vars for the app, one per line (KEY=VALUE)"
         required: false
@@ -204,11 +199,11 @@ jobs:
 
       # ── Start apps ────────────────────────────────────────────────
       - name: Start app under test
-        if: inputs.app_type == 'runnable' && inputs.start_command != ''
+        if: inputs.app_type == 'runnable'
         run: |
           echo "${{ inputs.start_env }}" > /tmp/app_env
           set -a; source /tmp/shared_env; source /tmp/app_env; set +a
-          ${{ inputs.start_command }} &
+          python main.py &
           sleep 5
 
       - name: Start regression partner (library)
