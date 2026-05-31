@@ -1,0 +1,296 @@
+name: PR Test (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      app_type:
+        description: "'runnable' (ingestion, strategy) or 'library' (sdk)"
+        required: true
+        type: string
+      app_name:
+        description: "Short name: ingestion, simple-strategy, sdk"
+        required: true
+        type: string
+      start_command:
+        description: "Shell command to start the app (runnable only, empty for library)"
+        required: false
+        type: string
+        default: ""
+      start_env:
+        description: "Extra env vars for start_command, one per line (KEY=VALUE)"
+        required: false
+        type: string
+        default: ""
+      integration_partner:
+        description: "Second app to clone+start for integration tests (ingestion|simple-strategy|none)"
+        required: false
+        type: string
+        default: "none"
+      needs_alpaca:
+        description: "When Alpaca secrets are required: always, integration, never"
+        required: false
+        type: string
+        default: "never"
+      sdk_version_pattern:
+        description: "Regex to extract SDK version from pyproject.toml (runnable only)"
+        required: false
+        type: string
+        default: "trading-cz/sdk@[v\\d.]+"
+    secrets:
+      alpaca_api_key:
+        required: false
+      alpaca_secret_key:
+        required: false
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  parse:
+    runs-on: ubuntu-latest
+    outputs:
+      markers: ${{ steps.cmd.outputs.markers }}
+      label: ${{ steps.cmd.outputs.label }}
+      sha: ${{ steps.pr.outputs.sha }}
+      ref: ${{ steps.pr.outputs.ref }}
+    steps:
+      - name: Check if PR comment
+        id: check
+        run: |
+          if [ "${{ github.event.issue.pull_request }}" = "" ]; then
+            echo "skip=true" >> $GITHUB_OUTPUT
+          else
+            echo "skip=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Parse command
+        if: steps.check.outputs.skip != 'true'
+        id: cmd
+        run: |
+          case "${{ github.event.comment.body }}" in
+            "/test")              echo "markers=smoke or regression" >> $GITHUB_OUTPUT
+                                  echo "label=all" >> $GITHUB_OUTPUT ;;
+            "/smoke-test")        echo "markers=smoke" >> $GITHUB_OUTPUT
+                                  echo "label=smoke" >> $GITHUB_OUTPUT ;;
+            "/regression-test")   echo "markers=regression" >> $GITHUB_OUTPUT
+                                  echo "label=regression" >> $GITHUB_OUTPUT ;;
+            "/integration-test")  echo "markers=integration" >> $GITHUB_OUTPUT
+                                  echo "label=integration" >> $GITHUB_OUTPUT ;;
+            *)                    echo "markers=none" >> $GITHUB_OUTPUT
+                                  echo "label=none" >> $GITHUB_OUTPUT ;;
+          esac
+
+      - name: Get PR details
+        if: steps.check.outputs.skip != 'true' && steps.cmd.outputs.markers != 'none'
+        id: pr
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: context.issue.number,
+            });
+            core.setOutput('sha', pr.head.sha);
+            core.setOutput('ref', pr.head.ref);
+
+  test:
+    needs: parse
+    if: needs.parse.outputs.markers != 'none'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.parse.outputs.sha }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.14"
+
+      # ── SDK: build wheel ──────────────────────────────────────────
+      - name: Build and install SDK (library)
+        if: inputs.app_type == 'library'
+        run: |
+          pip install build
+          python -m build
+          WHEEL=$(ls dist/*.whl | head -1)
+          echo "Installing $WHEEL"
+          pip install "$WHEEL"
+
+      # ── Runnable: install SDK from pyproject.toml ─────────────────
+      - name: Install SDK from pyproject.toml (runnable)
+        if: inputs.app_type == 'runnable'
+        run: |
+          SDK_VERSION=$(grep -oP '${{ inputs.sdk_version_pattern }}' pyproject.toml | grep -oP '[v\d.]+$' | head -1)
+          if [ -n "$SDK_VERSION" ]; then
+            echo "Installing trading-sdk @ $SDK_VERSION"
+            pip install "trading-sdk @ git+https://github.com/trading-cz/sdk@${SDK_VERSION}"
+          else
+            echo "No SDK version found in pyproject.toml, installing latest"
+            pip install "trading-sdk @ git+https://github.com/trading-cz/sdk@main"
+          fi
+
+      # ── Install the app itself ────────────────────────────────────
+      - name: Install app (runnable)
+        if: inputs.app_type == 'runnable'
+        run: pip install -e ".[dev]"
+
+      # ── Testing repo ──────────────────────────────────────────────
+      - name: Resolve testing branch
+        id: testing
+        run: |
+          BRANCH="${{ needs.parse.outputs.ref }}"
+          if git ls-remote --heads https://github.com/trading-cz/testing "$BRANCH" | grep -q "$BRANCH"; then
+            echo "branch=$BRANCH" >> $GITHUB_OUTPUT
+          else
+            echo "branch=main" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Checkout testing repo
+        uses: actions/checkout@v4
+        with:
+          repository: trading-cz/testing
+          path: ../testing
+          ref: ${{ steps.testing.outputs.branch }}
+
+      - name: Install testing deps
+        run: |
+          cd ../testing
+          pip install -e .
+
+      # ── Infrastructure: Kafka ─────────────────────────────────────
+      - name: Start Kafka
+        run: |
+          cd ../testing
+          docker compose up -d kafka
+          for i in $(seq 1 30); do
+            if docker compose exec -T kafka kafka-topics --bootstrap-server localhost:9092 --list >/dev/null 2>&1; then
+              echo "Kafka ready"
+              break
+            fi
+            sleep 2
+          done
+
+      # ── Start app under test (runnable) ───────────────────────────
+      - name: Start app
+        if: inputs.app_type == 'runnable' && inputs.start_command != ''
+        env:
+          ALPACA_API_KEY: ${{ inputs.needs_alpaca == 'always' && secrets.alpaca_api_key || '' }}
+          ALPACA_SECRET_KEY: ${{ inputs.needs_alpaca == 'always' && secrets.alpaca_secret_key || '' }}
+        run: |
+          echo "${{ inputs.start_env }}" > /tmp/start_env
+          set -a; source /tmp/start_env; set +a
+          ENVIRONMENT=tst KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
+            ${{ inputs.start_command }} &
+          sleep 5
+
+      # ── Regression partner for SDK: start strategy ────────────────
+      - name: Start strategy for SDK regression
+        if: |
+          inputs.app_type == 'library' &&
+          (needs.parse.outputs.label == 'regression' ||
+           needs.parse.outputs.label == 'integration' ||
+           needs.parse.outputs.label == 'all')
+        run: |
+          git clone --depth 1 https://github.com/trading-cz/simple-strategy ../simple-strategy
+          cd ../simple-strategy
+          pip install -e .
+          ENVIRONMENT=tst KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
+            STRATEGY_ID=atr3_open_stop SYMBOLS='["SPY"]' \
+            python main.py &
+          sleep 5
+
+      # ── Integration partner ───────────────────────────────────────
+      - name: Start integration partner
+        if: |
+          inputs.integration_partner != 'none' &&
+          (needs.parse.outputs.label == 'integration' || needs.parse.outputs.label == 'all')
+        env:
+          ALPACA_API_KEY: ${{ secrets.alpaca_api_key }}
+          ALPACA_SECRET_KEY: ${{ secrets.alpaca_secret_key }}
+        run: |
+          case "${{ inputs.integration_partner }}" in
+            simple-strategy)
+              git clone --depth 1 https://github.com/trading-cz/simple-strategy ../simple-strategy
+              cd ../simple-strategy
+              pip install -e .
+              ENVIRONMENT=tst KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
+                STRATEGY_ID=atr3_open_stop SYMBOLS='["SPY"]' \
+                python main.py &
+              ;;
+            ingestion)
+              git clone --depth 1 https://github.com/trading-cz/ingestion ../ingestion
+              cd ../ingestion
+              pip install -e .
+              ENVIRONMENT=tst KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
+                SERVICE_TYPE=historical ALPACA_FEED=sip \
+                python main.py &
+              ;;
+          esac
+          sleep 5
+
+      # ── SDK integration: also start ingestion ─────────────────────
+      - name: Start ingestion for SDK integration
+        if: |
+          inputs.app_type == 'library' &&
+          (needs.parse.outputs.label == 'integration' || needs.parse.outputs.label == 'all')
+        env:
+          ALPACA_API_KEY: ${{ secrets.alpaca_api_key }}
+          ALPACA_SECRET_KEY: ${{ secrets.alpaca_secret_key }}
+        run: |
+          git clone --depth 1 https://github.com/trading-cz/ingestion ../ingestion
+          cd ../ingestion
+          pip install -e .
+          ENVIRONMENT=tst KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
+            SERVICE_TYPE=historical ALPACA_FEED=sip \
+            python main.py &
+          sleep 5
+
+      # ── Run tests ─────────────────────────────────────────────────
+      - name: Run tests
+        id: pytest
+        env:
+          ALPACA_API_KEY: ${{ (inputs.needs_alpaca == 'always' || inputs.needs_alpaca == 'integration') && secrets.alpaca_api_key || '' }}
+          ALPACA_SECRET_KEY: ${{ (inputs.needs_alpaca == 'always' || inputs.needs_alpaca == 'integration') && secrets.alpaca_secret_key || '' }}
+        run: |
+          cd ../testing
+          KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
+          TEST_ENVIRONMENT=tst \
+          python -m pytest tests/ \
+            -v -m "${{ needs.parse.outputs.markers }}" \
+            --tb=short \
+            --junitxml=test-results.xml
+          echo "exit_code=${PIPESTATUS[0]}" >> $GITHUB_OUTPUT
+
+      # ── Post results ──────────────────────────────────────────────
+      - name: Post results comment
+        if: always()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const exitCode = '${{ steps.pytest.outputs.exit_code }}';
+            let summary = '## 🧪 Test Results\n\n';
+            summary += `**App**: ${{ inputs.app_name }} (${{ inputs.app_type }})\n`;
+            summary += `**Trigger**: \`${{ github.event.comment.body }}\`\n`;
+            summary += `**Branch**: \`${{ needs.parse.outputs.ref }}\`\n`;
+            summary += `**Markers**: \`${{ needs.parse.outputs.markers }}\`\n\n`;
+            if (exitCode === '0') {
+              summary += '✅ All tests passed\n';
+            } else {
+              summary += '❌ Tests failed — check workflow logs\n';
+            }
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: context.issue.number,
+              body: summary,
+            });
+
+      # ── Cleanup ───────────────────────────────────────────────────
+      - name: Cleanup
+        if: always()
+        run: |
+          pkill -f "python main.py" 2>/dev/null || true
+          cd ../testing && docker compose down -v 2>/dev/null || true
