@@ -59,6 +59,11 @@ MARKDOWN_MARKDOWNLINT_FILTER_REGEX_EXCLUDE: "doc/"
 # YAML formatting
 YAML_PRETTIER_ARGUMENTS: '--single-quote'
 
+# Trivy security scanning
+# DS-0026 (HEALTHCHECK) is irrelevant for K3s/Kubernetes deployments
+# which use K8s liveness/readiness probes instead of Docker HEALTHCHECK
+REPOSITORY_TRIVY_ARGUMENTS: "--skip-checks DS-0026"
+
 # Display output options
 SHOW_ELAPSED_TIME: true
 SHOW_SKIPPED_LINTERS: true
