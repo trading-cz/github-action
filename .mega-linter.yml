@@ -69,9 +69,10 @@ SHOW_ELAPSED_TIME: true
 SHOW_SKIPPED_LINTERS: true
 SHOW_LINTER_TIMINGS: true
 
-# Disable LLM advisor and flavor suggestions
+# Disable LLM advisor, flavor suggestions, and security announcements
 LLM_ADVISOR_ENABLED: false
 FLAVOR_SUGGESTIONS: false
+SECURITY_SUGGESTIONS: false
 
 # Fail on errors
 DISABLE_ERRORS: false
