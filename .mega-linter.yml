@@ -7,9 +7,7 @@
 # - Formatters (BLACK, ISORT, YAML_PRETTIER): Kept for auto-fix, not noise
 
 # Apply fixes for formatters
-APPLY_FIXES: all
-APPLY_FIXES_EVENT: all
-APPLY_FIXES_MODE: commit
+APPLY_FIXES: none
 
 # Validate all codebase
 VALIDATE_ALL_CODEBASE: true
