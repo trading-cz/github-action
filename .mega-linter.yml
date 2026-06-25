@@ -9,6 +9,11 @@
 # Apply fixes for formatters
 APPLY_FIXES: none
 
+# Install project dependencies before running linters so mypy/pylint
+# can resolve imports from pip/git dependencies (e.g., trading-sdk).
+PRE_COMMANDS:
+  - command: pip install -e .[dev] 2>&1 || echo "pip install .[dev] failed (non-fatal)"
+
 # Validate all codebase
 VALIDATE_ALL_CODEBASE: true
 
