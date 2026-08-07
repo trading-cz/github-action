@@ -9,10 +9,14 @@
 # Apply fixes for formatters
 APPLY_FIXES: none
 
-# Install project dependencies before running linters so mypy/pylint
-# can resolve imports from pip/git dependencies (e.g., trading-sdk).
+# Install SDK and pure-Python deps into megalinter's mypy virtualenv so
+# mypy can resolve imports from pip/git dependencies (e.g., trading-sdk).
+# Megalinter runs mypy from /venvs/mypy/, isolated from the system Python.
+# We skip confluent-kafka: Alpine's librdkafka (2.12) is too old for
+# confluent-kafka-python (needs >=2.14), and not needed for static analysis.
 PRE_COMMANDS:
-  - command: pip install -e .[dev] 2>&1 || echo "pip install .[dev] failed (non-fatal)"
+  - command: /venvs/mypy/bin/pip install python-dotenv pydantic pydantic-settings
+  - command: /venvs/mypy/bin/pip install --no-deps "trading-sdk @ git+https://github.com/trading-cz/sdk@v0.1.21"
 
 # Validate all codebase
 VALIDATE_ALL_CODEBASE: true
