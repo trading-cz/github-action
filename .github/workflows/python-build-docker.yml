@@ -29,13 +29,13 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: ${{ inputs.python-version }}
 
@@ -48,7 +48,7 @@ jobs:
         run: pytest tests/ -v
 
   build-and-push:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     needs: test
     permissions:
       contents: read

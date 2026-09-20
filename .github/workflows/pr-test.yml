@@ -52,7 +52,7 @@ permissions:
 
 jobs:
   parse:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     outputs:
       markers: ${{ steps.cmd.outputs.markers }}
       label: ${{ steps.cmd.outputs.label }}
@@ -102,14 +102,14 @@ jobs:
   test:
     needs: parse
     if: needs.parse.outputs.markers != 'none'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-26.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
         with:
           ref: ${{ needs.parse.outputs.sha }}
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.14"
 
