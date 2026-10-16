@@ -36,6 +36,20 @@ jobs:
 |-------|------|---------|-------------|
 | `python-version` | string | `3.12` | Python version (e.g., `3.12`, `3.11`) |
 | `test-dir` | string | `tests` | Directory containing test files |
+| `install-project` | boolean | `true` | Install the repository package and development dependencies |
+| `coverage-source` | string | `tradingcz` | Package to measure for coverage; empty disables coverage reporting |
+
+For a repository containing standalone Python scripts instead of an installable package, disable package installation and coverage:
+
+```yaml
+jobs:
+  test:
+    uses: trading-cz/github-action/.github/workflows/python-ci.yml@main
+    with:
+      test-dir: test
+      install-project: false
+      coverage-source: ''
+```
 
 **Jobs:**
 

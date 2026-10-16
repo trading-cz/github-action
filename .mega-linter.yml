@@ -105,3 +105,11 @@ PRE_COMMANDS:
     cwd: workspace
     run_before_linters: true
     continue_if_failed: true
+
+  # Install the project's declared SDK requirement into mypy's environment.
+  - command: |
+      if [ -n "${TRADING_SDK_DEPENDENCY:-}" ]; then
+        /venvs/mypy/bin/pip install --no-deps "$TRADING_SDK_DEPENDENCY"
+      fi
+    cwd: workspace
+    run_before_linters: true
