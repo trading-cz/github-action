@@ -49,8 +49,7 @@ jobs:
             echo "exists=false" >> $GITHUB_OUTPUT
           fi
 
-      - name: Checkout github-action defaults
-        if: steps.config.outputs.exists == 'false' || steps.pylintrc.outputs.exists == 'false'
+      - name: Checkout github-action defaults and scripts
         uses: actions/checkout@v4
         with:
           repository: trading-cz/github-action
@@ -79,21 +78,23 @@ jobs:
           cp .github-action-defaults/.pylintrc ./.pylintrc
           echo "✓ Using default .pylintrc from github-action"
 
+      - name: Resolve trading-sdk dependency
+        id: trading_sdk
+        shell: bash
+        run: python3 .github-action-defaults/.github/script/resolve-trading-sdk-dependency-for-megalinter.py
+
       - name: Cleanup github-action-defaults
-        if: steps.config.outputs.exists == 'false' || steps.pylintrc.outputs.exists == 'false'
+        if: always()
         run: |
-          if [ -d ".github-action-defaults" ]; then
-            rm -rf .github-action-defaults
-            echo "✓ Removed .github-action-defaults"
-          else
-            echo "No defaults directory to remove"
-          fi
+          rm -rf .github-action-defaults
+          echo "✓ Removed .github-action-defaults"
 
       - name: MegaLinter
         id: ml
         uses: oxsecurity/megalinter/flavors/python@v9
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TRADING_SDK_DEPENDENCY: ${{ steps.trading_sdk.outputs.dependency }}
       
       - name: Archive MegaLinter reports
         uses: actions/upload-artifact@v4
